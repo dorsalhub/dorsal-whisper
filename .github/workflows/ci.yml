@@ -26,7 +26,7 @@ jobs:
       - name: Add uv to PATH
         run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync
       - name: Run Static Analysis
         run: |
           uv run ruff format --check .
