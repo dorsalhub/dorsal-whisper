@@ -3,3 +3,9 @@ dist/
 *.egg-info/
 __pycache__/
 .pytest_cache/
+
+venv
+.venv
+.env
+
+dorsal.toml

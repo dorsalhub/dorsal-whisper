@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dorsal-whisper"
+version = "0.1.1"
+description = "Dorsal model: dorsal-whisper"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dorsalhub",
+    "faster-whisper>=0.10.0"
+]
+
+# --- DORSAL REGISTRY CONFIG ---
+# This registers your model with the Dorsal ecosystem.
+[project.entry-points."dorsal.models"]
+dorsal_whisper = "dorsal_whisper:DORSAL_CONFIG"
+
+# --- PACKAGING CONFIG ---
+[tool.hatch.build.targets.wheel]
+packages = ["dorsal_whisper"]
