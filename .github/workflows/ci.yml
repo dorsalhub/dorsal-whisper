@@ -31,7 +31,6 @@ jobs:
         run: |
           uv run ruff format --check .
           uv run ruff check .
-          # Changed 'src/dorsal' to 'dorsal_whisper' to match your package structure
           uv run mypy dorsal_whisper
 
   build-and-test:
@@ -62,13 +61,15 @@ jobs:
 
       - name: Add uv to PATH (Windows)
         if: runner.os == 'Windows'
-        run: echo "$env:USERPROFILE\.cargo\bin" >> $env:GITHUB_PATH
+        # FIXED: Changed .cargo\bin to .local\bin based on installation logs
+        run: echo "$env:USERPROFILE\.local\bin" >> $env:GITHUB_PATH
 
       - name: Restore uv cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/bin/uv
+            ~/.local/bin/uv
             .venv
           key: ${{ runner.os }}-${{ matrix.python-version }}-uv-${{ hashFiles('uv.lock') }}
           restore-keys: |
