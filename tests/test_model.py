@@ -1,8 +1,9 @@
 import pathlib
 from dorsal.testing import run_model
-from dorsal_whisper.config import DORSAL_CONFIG 
+from dorsal_whisper.config import DORSAL_CONFIG
 
 TEST_ASSETS = pathlib.Path(__file__).parent / "assets"
+
 
 def test_model_integration():
     """Tests the Whisper model running inside the Dorsal harness."""
@@ -21,7 +22,7 @@ def test_model_integration():
     assert result.record is not None, "Model returned no data"
 
     output = result.record
-    
+
     assert "faster-whisper" in output["producer"]
     assert "text" in output
     assert len(output["text"]) > 0, "Transcription should not be empty"

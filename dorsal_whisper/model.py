@@ -58,7 +58,9 @@ class FasterWhisperTranscriber(AnnotationModel):
             return self._active_model[1]
 
         if self._active_model:
-            logger.info(f"Evicting model '{self._active_model[0]}' from cache to load '{model_size}'...")
+            logger.info(
+                f"Evicting model '{self._active_model[0]}' from cache to load '{model_size}'..."
+            )
             del FasterWhisperTranscriber._active_model
             FasterWhisperTranscriber._active_model = None
 
@@ -66,10 +68,14 @@ class FasterWhisperTranscriber(AnnotationModel):
 
         try:
             # Usually GPU float16
-            model = WhisperModel(model_size_or_path=model_size, device="auto", compute_type="default")
+            model = WhisperModel(
+                model_size_or_path=model_size, device="auto", compute_type="default"
+            )
         except (ValueError, RuntimeError) as e:
             logger.warning(f"Auto-loading failed, falling back to CPU int8: {e}")
-            model = WhisperModel(model_size_or_path=model_size, device="cpu", compute_type="int8")
+            model = WhisperModel(
+                model_size_or_path=model_size, device="cpu", compute_type="int8"
+            )
 
         logger.info(f"Loaded faster-whisper model '{model_size}' successfully.")
 
@@ -77,7 +83,11 @@ class FasterWhisperTranscriber(AnnotationModel):
         return model
 
     def main(
-        self, model_size: str | None = None, beam_size: int = 5, vad_filter: bool = True, force: bool = False
+        self,
+        model_size: str | None = None,
+        beam_size: int = 5,
+        vad_filter: bool = True,
+        force: bool = False,
     ) -> dict | None:
         """
         Transcribe a media file using faster-whisper.
@@ -105,9 +115,13 @@ class FasterWhisperTranscriber(AnnotationModel):
             return None
 
         try:
-            logger.debug(f"Transcribing {self.name} with {target_size} (beam={beam_size}, vad={vad_filter})...")
+            logger.debug(
+                f"Transcribing {self.name} with {target_size} (beam={beam_size}, vad={vad_filter})..."
+            )
 
-            segments_generator, info = model.transcribe(self.file_path, beam_size=beam_size, vad_filter=vad_filter)
+            segments_generator, info = model.transcribe(
+                self.file_path, beam_size=beam_size, vad_filter=vad_filter
+            )
 
             segments = list(segments_generator)
 
@@ -126,7 +140,12 @@ class FasterWhisperTranscriber(AnnotationModel):
             score = math.exp(seg.avg_logprob)
 
             schema_segments.append(
-                {"text": text_clean, "start_time": seg.start, "end_time": seg.end, "score": round(score, 4)}
+                {
+                    "text": text_clean,
+                    "start_time": seg.start,
+                    "end_time": seg.end,
+                    "score": round(score, 4),
+                }
             )
 
         full_text = " ".join(full_text_parts)
