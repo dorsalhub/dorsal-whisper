@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+from importlib.metadata import version
 import math
 from typing import ClassVar, Any
 
@@ -42,7 +43,7 @@ class FasterWhisperTranscriber(AnnotationModel):
     """
 
     id = "github:dorsalhub/dorsal-whisper"
-    version = "0.1.1"
+    version = version("dorsal-whisper")
     variant = f"faster-whisper-{FASTER_WHISPER_VERSION}"
     default_model_size = "base"
     _active_model: ClassVar[tuple[str, Any] | None] = None

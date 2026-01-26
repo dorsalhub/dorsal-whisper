@@ -1,21 +1,25 @@
 import pathlib
+import tomllib
 from dorsal.testing import run_model
-from dorsal_whisper.config import DORSAL_CONFIG
+from dorsal_whisper.model import FasterWhisperTranscriber
 
 TEST_ASSETS = pathlib.Path(__file__).parent / "assets"
 
+root = pathlib.Path(__file__).parent.parent
+with open(root / "model_config.toml", "rb") as f:
+    config = tomllib.load(f)
 
 def test_model_integration():
     """Tests the Whisper model running inside the Dorsal harness."""
     audio_file = TEST_ASSETS / "OSR_uk_000_0020_8k.wav"
 
     result = run_model(
-        annotation_model=DORSAL_CONFIG["model_class"],
+        annotation_model=FasterWhisperTranscriber,
         file_path=str(audio_file),
-        schema_id=DORSAL_CONFIG["schema_id"],
-        validation_model=DORSAL_CONFIG.get("validation_model"),
-        dependencies=DORSAL_CONFIG.get("dependencies"),
-        options=DORSAL_CONFIG.get("options"),
+        schema_id=config["schema_id"],
+        validation_model=config.get("validation_model"),
+        dependencies=config.get("dependencies"),
+        options=config.get("options"),
     )
 
     assert result.error is None, f"Model execution failed: {result.error}"

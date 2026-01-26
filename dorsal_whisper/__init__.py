@@ -1,3 +1,3 @@
-from .config import DORSAL_CONFIG
+from .model import FasterWhisperTranscriber
 
-__all__ = ["DORSAL_CONFIG"]
+__all__ = ["FasterWhisperTranscriber"]

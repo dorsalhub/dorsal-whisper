@@ -1,0 +1,10 @@
+model_class = "FasterWhisperTranscriber"
+
+schema_id = "open/audio-transcription"
+
+[[dependencies]]
+type = "media_type"
+include = ["audio", "video"]
+
+[options]
+model_size = "base"

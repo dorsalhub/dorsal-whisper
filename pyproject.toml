@@ -21,11 +21,11 @@ dev = [
     "mypy"
 ]
 
-# --- DORSAL REGISTRY CONFIG ---
-# This registers your model with the Dorsal ecosystem.
 [project.entry-points."dorsal.models"]
-dorsal_whisper = "dorsal_whisper:DORSAL_CONFIG"
+dorsal_whisper = "dorsal_whisper"
 
-# --- PACKAGING CONFIG ---
 [tool.hatch.build.targets.wheel]
 packages = ["dorsal_whisper"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"model_config.toml" = "dorsal_whisper/model_config.toml"
