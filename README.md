@@ -1,6 +1,6 @@
 # Dorsal Whisper
 
-A [Dorsal](https://dorsalhub.com) model wrapper for **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)**.
+A Dorsal annotation model wrapper for **[faster-whisper](https://github.com/SYSTRAN/faster-whisper)**.
 
 High-performance speech-to-text transcription using CTranslate2-based Whisper models.
 
