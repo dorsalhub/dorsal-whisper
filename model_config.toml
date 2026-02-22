@@ -1,6 +1,7 @@
 model_class = "FasterWhisperTranscriber"
 
 schema_id = "open/audio-transcription"
+schema_version = "0.4.0"
 
 [[dependencies]]
 type = "media_type"
