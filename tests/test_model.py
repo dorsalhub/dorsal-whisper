@@ -9,6 +9,7 @@ root = pathlib.Path(__file__).parent.parent
 with open(root / "model_config.toml", "rb") as f:
     config = tomllib.load(f)
 
+
 def test_model_integration():
     """Tests the Whisper model running inside the Dorsal harness."""
     audio_file = TEST_ASSETS / "OSR_uk_000_0020_8k.wav"
