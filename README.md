@@ -84,9 +84,3 @@ pytest
 ## License
 
 This project is licensed under the Apache 2.0 License.
-
-```
-
-How does this flow feel for your intended developer audience? It keeps them focused on fast execution while providing guardrails against poor configuration practices.
-
-```
