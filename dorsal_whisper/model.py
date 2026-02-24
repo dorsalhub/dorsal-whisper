@@ -22,12 +22,13 @@ from dorsal.common.language import normalize_language_alpha3
 
 try:
     import faster_whisper  # type: ignore[import-untyped]
-    from faster_whisper import WhisperModel  # type: ignore[import-untyped]
+    from faster_whisper import WhisperModel, BatchedInferencePipeline  # type: ignore[import-untyped]
 
     FASTER_WHISPER_VERSION = getattr(faster_whisper, "__version__", "unknown")
 
 except ImportError:
     WhisperModel = None
+    BatchedInferencePipeline = None
     FASTER_WHISPER_VERSION = "unknown"
 
 MAX_TEXT_LENGTH = 524288
@@ -48,29 +49,27 @@ class FasterWhisperTranscriber(AnnotationModel):
     default_model_size = "base"
     _active_model: ClassVar[tuple[str, Any] | None] = None
 
-    def _load_model(self, model_size: str):
-        """
-        Load the requested model.
-        If it matches the currently cached model, return it.
-        Otherwise, remove the old model from memory and load the new one.
-        """
-        if self._active_model and self._active_model[0] == model_size:
-            logger.debug(f"Loading from cache: {self._active_model[0]}")
+    def _load_model(self, model_size: str, compute_type: str = "default"):
+        cache_key = f"{model_size}-{compute_type}"
+
+        if self._active_model and self._active_model[0] == cache_key:
+            logger.debug(f"Loading from cache: {cache_key}")
             return self._active_model[1]
 
         if self._active_model:
             logger.info(
-                f"Evicting model '{self._active_model[0]}' from cache to load '{model_size}'..."
+                f"Evicting model '{self._active_model[0]}' from cache to load '{cache_key}'..."
             )
             del FasterWhisperTranscriber._active_model
             FasterWhisperTranscriber._active_model = None
 
-        logger.info(f"Loading faster-whisper model '{model_size}'...")
+        logger.info(
+            f"Loading faster-whisper model '{model_size}' with compute_type '{compute_type}'..."
+        )
 
         try:
-            # Usually GPU float16
             model = WhisperModel(
-                model_size_or_path=model_size, device="auto", compute_type="default"
+                model_size_or_path=model_size, device="auto", compute_type=compute_type
             )
         except (ValueError, RuntimeError) as e:
             logger.warning(f"Auto-loading failed, falling back to CPU int8: {e}")
@@ -80,7 +79,7 @@ class FasterWhisperTranscriber(AnnotationModel):
 
         logger.info(f"Loaded faster-whisper model '{model_size}' successfully.")
 
-        FasterWhisperTranscriber._active_model = (model_size, model)
+        FasterWhisperTranscriber._active_model = (cache_key, model)
         return model
 
     def main(
@@ -89,6 +88,9 @@ class FasterWhisperTranscriber(AnnotationModel):
         beam_size: int = 5,
         vad_filter: bool = True,
         force: bool = False,
+        batch_size: int | None = None,
+        compute_type: str = "default",
+        **kwargs,
     ) -> dict | None:
         """
         Transcribe a media file using faster-whisper.
@@ -98,8 +100,9 @@ class FasterWhisperTranscriber(AnnotationModel):
             beam_size: Beam size for decoding. Defaults to 5.
             vad_filter: Whether to apply Voice Activity Detection to filter silence. Defaults to True.
             force: If True, allows output text to exceed the schema limit.
-                   If False (default), out-of-bounds text is truncated.
-
+            batch_size: If provided, wraps the model in BatchedInferencePipeline for faster inference.
+            compute_type: Force quantization type (e.g., "int8", "float16", "default").
+            **kwargs: Additional arguments passed directly to model.transcribe (e.g., task="translate", language="ja", word_timestamps=True).
         Returns:
             A dictionary matching the open/audio-transcription schema, or None on failure.
         """
@@ -110,21 +113,37 @@ class FasterWhisperTranscriber(AnnotationModel):
         target_size = model_size or self.default_model_size
 
         try:
-            model = self._load_model(target_size)
+            model = self._load_model(target_size, compute_type=compute_type)
         except Exception as e:
             self.set_error(f"Failed to load model '{target_size}': {e}")
             return None
 
         try:
+            if batch_size is not None:
+                logger.info(
+                    f"Using BatchedInferencePipeline with batch_size={batch_size}"
+                )
+                inference_model = BatchedInferencePipeline(model=model)
+            else:
+                inference_model = model
+
             logger.debug(
-                f"Transcribing {self.name} with {target_size} (beam={beam_size}, vad={vad_filter})..."
+                f"Transcribing {self.name} with {target_size} (beam={beam_size}, vad={vad_filter}, kwargs={kwargs})..."
             )
 
-            segments_generator, info = model.transcribe(
-                self.file_path, beam_size=beam_size, vad_filter=vad_filter
+            if batch_size is not None:
+                kwargs["batch_size"] = batch_size
+
+            segments_generator, info = inference_model.transcribe(
+                self.file_path, beam_size=beam_size, vad_filter=vad_filter, **kwargs
             )
 
-            segments = list(segments_generator)
+            segments = []
+            total_duration = round(info.duration, 2)
+
+            for seg in segments_generator:
+                segments.append(seg)
+                self.update_progress(current=seg.end, total=total_duration)
 
         except Exception as e:
             self.set_error(f"Transcription failed: {e}")
@@ -134,18 +153,25 @@ class FasterWhisperTranscriber(AnnotationModel):
 
         schema_segments = []
         full_text_parts = []
+        use_word_timing = kwargs.get("word_timestamps", False)
 
         for seg in segments:
             text_clean = seg.text.strip()
             full_text_parts.append(text_clean)
-            score = math.exp(seg.avg_logprob)
+
+            start_time = float(seg.start)
+            end_time = float(seg.end)
+
+            if use_word_timing and hasattr(seg, "words") and seg.words:
+                start_time = float(seg.words[0].start)
+                end_time = float(seg.words[-1].end)
 
             schema_segments.append(
                 {
                     "text": text_clean,
-                    "start_time": seg.start,
-                    "end_time": seg.end,
-                    "score": round(score, 4),
+                    "start_time": round(start_time, 3),
+                    "end_time": round(end_time, 3),
+                    "score": round(math.exp(float(seg.avg_logprob)), 4),
                 }
             )
 
