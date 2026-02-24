@@ -28,31 +28,44 @@ dorsal run dorsalhub/dorsal-whisper ./audio.wav
 
 You can pass options to the model using the `--opt` (or `-o`) flag.
 
-Example: use a larger whisper model:
+Example: use a larger whisper model and translate the output:
 
 ```bash
-dorsal run dorsalhub/dorsal-whisper ./audio.wav --opt model_size=large-v3
+dorsal model run dorsalhub/dorsal-whisper ./audio.wav --opt model_size=large-v3 --opt task=translate
 ```
 
 *Note: You may need to install NVIDIA libraries (cuBLAS/cuDNN) separately if you intend to run on GPU. See the [faster-whisper documentation](https://github.com/SYSTRAN/faster-whisper) for GPU setup.*
 
-Supported options (with defaults):
+**Supported Core Options:**
 
 * `model_size` (default: `base`)
 * `beam_size` (default: `5`)
 * `vad_filter` (default: `true`)
+* `batch_size` (Wraps the model in a `BatchedInferencePipeline` for much faster processing)
+* `compute_type` (default: `default`, can force `int8` or `float16`)
+* `**kwargs`: Any additional arguments supported by `faster-whisper`'s `transcribe` method (e.g., `task="translate"`, `language="fr"`, `word_timestamps=true`).
+
+**Passing Complex Arguments (JSON)**
+
+Dorsal's CLI natively supports parsing JSON strings for advanced configuration. This is incredibly useful for tuning `faster-whisper`'s Voice Activity Detection (VAD) to prevent the model from hallucinating or looping on background noise.
+
+Pass dictionary arguments by wrapping valid JSON in single quotes:
+
+```bash
+dorsal model run dorsalhub/dorsal-whisper ./video.mkv \
+  --opt model_size=large-v2 \
+  --opt vad_parameters='{"threshold": 0.8, "min_speech_duration_ms": 250}'
+```
 
 ### Output Formats & Exporting
 
-By default, the CLI outputs a table with timestamps. You can output raw JSON or export this data to other standard formats:
+By default, the CLI outputs a table with timestamps, and saves a validated JSON record to the current working directory.
+
+You also export to other standard formats right from the CLI:
 
 ```bash
-# Output raw schema-compliant JSON
-dorsal model run dorsalhub/dorsal-whisper ./video.mkv --json
-
 # Export directly to SubRip Subtitle format (.srt)
 dorsal model run dorsalhub/dorsal-whisper ./video.mkv --export=srt
-
 ```
 
 ## Output
@@ -68,7 +81,6 @@ This model produces a file annotation conforming to the [Open Validation Schemas
 * `attributes`: Includes `language_probability`.
 
 
-
 ## Development
 
 ### Running Tests
@@ -78,7 +90,6 @@ This repository uses `pytest` for integration testing.
 ```bash
 pip install -e .[test]
 pytest
-
 ```
 
 ## License
